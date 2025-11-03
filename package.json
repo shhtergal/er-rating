@@ -2,7 +2,7 @@
   "name": "er-website",
   "version": "0.1.0",
   "private": true,
-  "homepage": "http://shhtergal.github.io",
+  "homepage": "http://shhtergal.github.io/er-website",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
