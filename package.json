@@ -12,29 +12,22 @@
     "deploy": "gh-pages -d build"
   },
   "dependencies": {
-    "aws-amplify": "^6.15.7",
     "list-react-files": "^0.2.0",
     "next": "16.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
   "devDependencies": {
-    "@aws-amplify/backend": "^1.17.0",
-    "@aws-amplify/backend-cli": "^1.8.0",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/posnpm create amplify@latest -ytcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.0",
-    "aws-cdk-lib": "^2.216.0",
-    "constructs": "^10.4.2",
-    "esbuild": "^0.25.12",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "gh-pages": "^6.3.0",
     "tailwindcss": "^4",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
+    "typescript": "^5",
     "vite": "^7.1.12"
   }
 }

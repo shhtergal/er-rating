@@ -8,14 +8,107 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [culture, setCulture] = useState("");
 
-  const cultures = [
-    "American",
-    "Japanese",
-    "Indian",
-    "Brazilian",
-    "Nigerian",
-    "Other",
-  ];
+const cultures = [
+  // 🇺🇸 North America
+  "American",
+  "USA",
+  "Canadian",
+  "Mexican",
+
+  // 🇪🇺 Europe
+  "British",
+  "Irish",
+  "French",
+  "Belgian",
+  "German",
+  "Dutch",
+  "Swiss",
+  "Austrian",
+  "Italian",
+  "Spanish",
+  "Portuguese",
+  "Greek",
+  "Serbian",
+  "Croatian",
+  "Hungarian",
+  "Polish",
+  "Czech",
+  "Slovak",
+  "Romanian",
+  "Bulgarian",
+  "Turkish",
+  "Israeli",
+
+  // 🇪🇺 Northern Europe
+  "Swedish",
+  "Norwegian",
+  "Finnish",
+  "Danish",
+  "Icelandic",
+
+  // 🌍 Middle East & North Africa
+  "Egyptian",
+  "Moroccan",
+  "Lebanese",
+  "Jordanian",
+  "Saudi Arabian",
+  "Iranian",
+  "Iraqi",
+  "Syrian",
+  "Emirati",
+
+  // 🌍 Sub-Saharan Africa
+  "Nigerian",
+  "Kenyan",
+  "Ethiopian",
+  "Ghanaian",
+  "South African",
+  "Tanzanian",
+  "Ugandan",
+
+  // 🌏 Asia
+  "Chinese",
+  "Japanese",
+  "Korean",
+  "Indian",
+  "Pakistani",
+  "Bangladeshi",
+  "Sri Lankan",
+  "Thai",
+  "Vietnamese",
+  "Indonesian",
+  "Filipino",
+  "Malaysian",
+  "Singaporean",
+
+  // 🌏 Oceania
+  "Australian",
+  "New Zealander",
+
+  // 🌎 South America
+  "Brazilian",
+  "Argentinian",
+  "Chilean",
+  "Colombian",
+  "Peruvian",
+
+  // 🌎 Central America & Caribbean
+  "Cuban",
+  "Puerto Rican",
+  "Dominican",
+  "Venezuelan",
+
+  // 🇷🇺 Eastern Europe / Eurasia
+  "Russian",
+  "Ukrainian",
+  "Belarusian",
+  "Georgian",
+  "Kazakh",
+  "Armenian",
+
+  // Misc / Mixed
+  "Other",
+];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

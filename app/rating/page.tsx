@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 // Type the JSON as a name→path map
 import rawFiles from "../vid_list.json";
 
+
+
+
 interface VideoInfo {
   name: string;
   url: string;
@@ -17,11 +20,19 @@ const ratingOptions = ["Anger", "Happiness", "Neutral", "Sadness", "Surprise"] a
 const VideoRating: React.FC = () => {
   const router = useRouter();
 
-  // ✅ Convert {name: path} → VideoInfo[]
+
+function shuffleArray<T>(array: T[]): T[] {
+  const a = [...array];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;}
+
   const videos: VideoInfo[] = useMemo(() => {
     const map = rawFiles as Record<string, string>;
-    return Object.entries(map).map(([name, url]) => ({ name, url }));
-    // If you want a stable order, add: .sort((a,b) => a.name.localeCompare(b.name))
+    const list= Object.entries(map).map(([name, url]) => ({ name, url }));
+    return shuffleArray(list)
   }, []);
 
   const [user, setUser] = useState<UserInfo | null>(null);
