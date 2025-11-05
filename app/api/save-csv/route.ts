@@ -4,7 +4,7 @@ import { S3Client, HeadObjectCommand, GetObjectCommand, PutObjectCommand } from 
 
 const REGION = 'eu-north-1';            // ← unchanged
 const KEY = "results/results.csv";
-
+const BUCKET = process.env.RESULTS_BUCKET!;   
 const s3 = new S3Client({ region: REGION });
 
 // --- helpers ---
