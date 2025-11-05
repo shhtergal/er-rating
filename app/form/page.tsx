@@ -21,20 +21,6 @@ function shuffleArray<T>(array: T[]): T[] {
   return a;
 }
 
-// normalize backslashes → forward slashes, then parse "{culture}_{emotion}_{index}.ext"
-function parseFromUrl(url: string) {
-  const normalized = url.replace(/\\/g, "/");
-  const filename = normalized.split("/").pop() || "";
-  // e.g., "videos/il_Happiness_012.mp4" → il, Happiness, 012
-  const m = filename.match(/^(.+?)_([A-Za-z]+)_(\d+)\.[^.]+$/i);
-  return {
-    stimCulture: m?.[1] ?? "",
-    stimEmotion: m?.[2] ?? "",
-    stimIndex: m?.[3] ?? "",
-    filename,
-  };
-}
-
 export default function VideoRating() {
   const router = useRouter();
 
@@ -51,9 +37,9 @@ export default function VideoRating() {
   >([]);
   const [done, setDone] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // limit how many videos to rate in one session (set to videos.length to do all)
-  const LIMIT = 100;
+  const LIMIT = 2;
 
   useEffect(() => {
     try {
@@ -70,6 +56,7 @@ export default function VideoRating() {
 
   const handleRating = useCallback(
     (rating: string) => {
+      if (saving || submitted) return;
       const currentVideo = videos[currentIndex];
       if (!currentVideo) return;
 
@@ -85,66 +72,48 @@ export default function VideoRating() {
 
       const next = currentIndex + 1;
       if (next >= Math.min(videos.length, LIMIT)) {
-        setDone(true); // triggers save effect below
+        setDone(true);
       } else {
         setCurrentIndex(next);
       }
     },
-    [currentIndex, videos]
+    [currentIndex, videos, saving, submitted]
   );
 
-  // Save CSV to server once we're done
   useEffect(() => {
     if (!done || submitted || !user) return;
 
-    const sendCsvToServer = async () => {
+    const ctrl = new AbortController();
+
+    const sendToServer = async () => {
       try {
-        const csvHeader =
-          "Name,UserCulture,Video,Rating,Time,StimCulture,StimEmotion,StimIndex,URL\n";
-
-        const csvRows = ratings
-          .map((r) => {
-            const meta = parseFromUrl(r.url);
-            return [
-              user.name,
-              user.culture,
-              r.video,           // original name key from vid_list.json
-              r.rating,
-              r.time,
-              meta.stimCulture,  // parsed from URL
-              meta.stimEmotion,  // parsed from URL
-              meta.stimIndex,    // parsed from URL
-              r.url,             // full URL for traceability
-            ].join(",");
-          })
-          .join("\n");
-
-        const csvContent = `\uFEFF${csvHeader}${csvRows}\n`;
-
+        setSaving(true);
         const resp = await fetch("/api/save-csv", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user, ratings }), // send raw data; server builds CSV
+          body: JSON.stringify({ user, ratings }),
+          signal: ctrl.signal,
         });
 
         if (!resp.ok) {
           const msg = await resp.text().catch(() => "");
           throw new Error(`Save failed: ${resp.status} ${msg}`);
         }
-11
         setSubmitted(true);
       } catch (err) {
         console.error(err);
         alert("Failed to save results. Please try again.");
+      } finally {
+        setSaving(false);
       }
-    };1
+    };
 
-    sendCsvToServer();
+    sendToServer();
+    return () => ctrl.abort();
   }, [done, submitted, user, ratings]);
 
   if (!user) return null;
 
-  // Finished UI
   if (submitted) {
     return (
       <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
@@ -154,7 +123,6 @@ export default function VideoRating() {
     );
   }
 
-  // Show “saving” while done but not yet submitted
   if (done && !submitted) {
     return (
       <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
@@ -210,13 +178,14 @@ export default function VideoRating() {
           <button
             key={r}
             onClick={() => handleRating(r)}
+            disabled={saving}
             style={{
               padding: "0.5rem 1rem",
-              backgroundColor: "#007bff",
+              backgroundColor: saving ? "#93c5fd" : "#007bff",
               color: "white",
               border: "none",
               borderRadius: "4px",
-              cursor: "pointer",
+              cursor: saving ? "not-allowed" : "pointer",
             }}
           >
             {r}
