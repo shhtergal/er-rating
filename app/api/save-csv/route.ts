@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import fsp from "fs/promises";
-import path from "path";
+import { S3Client, HeadObjectCommand, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
-// --- CSV helpers ---
+
+const REGION = 'eu-north-1';            // ← unchanged
+const KEY = "results/results.csv";
+
+const s3 = new S3Client({ region: REGION });
+
+// --- helpers ---
 function csvEscape(v: any): string {
   const s = String(v ?? "");
-  // Escape if contains comma, quote, newline
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
-
-// Normalize backslashes → forward slashes, then parse "{culture}_{emotion}_{index}.ext"
 function parseFromUrl(url: string) {
   const normalized = String(url).replace(/\\/g, "/");
   const filename = normalized.split("/").pop() || "";
@@ -20,43 +20,43 @@ function parseFromUrl(url: string) {
     stimCulture: m?.[1] ?? "",
     stimEmotion: m?.[2] ?? "",
     stimIndex: m?.[3] ?? "",
-    filename,
     normalized,
   };
 }
+async function streamToString(stream: any): Promise<string> {
+  // Node 18+ GetObject returns a web stream in AWS SDK v3
+  if (typeof stream?.getReader === "function") {
+    const reader = stream.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    return Buffer.concat(chunks).toString("utf8");
+  }
+  // Fallback (older runtimes)
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream as AsyncIterable<Buffer>) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks).toString("utf8");
+}
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
+  if (!BUCKET) {
+    return NextResponse.json({ error: "RESULTS_BUCKET env var is not set" }, { status: 500 });
+  }
 
-    // Expect: { user: {name, culture}, ratings: [{ video, url, rating, time }] }
-    const user = body?.user;
-    const ratings = body?.ratings;
+  try {
+    const { user, ratings } = await req.json();
 
     if (!user?.name || !user?.culture || !Array.isArray(ratings)) {
-      return NextResponse.json(
-        { error: "Missing user {name,culture} or ratings[]" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing user {name,culture} or ratings[]" }, { status: 400 });
     }
 
-    const resultsDir = path.join(process.cwd(), "results");
-    const resultsPath = path.join(resultsDir, "results.csv");
-
-    // Ensure dir exists
-    await fsp.mkdir(resultsDir, { recursive: true });
-
-    // If file doesn't exist, write header once
-    if (!fs.existsSync(resultsPath)) {
-      const header =
-        "Name,UserCulture,Video,Rating,Time,StimCulture,StimEmotion,StimIndex,URL\n";
-      await fsp.writeFile(resultsPath, header, "utf8");
-    }
-
-    // Build rows for this submission
-    const lines = ratings.map((r: any) => {
+    // Build rows
+    const lines: string[] = ratings.map((r: any) => {
       const meta = parseFromUrl(r?.url);
-      const row = [
+      return [
         csvEscape(user.name),
         csvEscape(user.culture),
         csvEscape(r?.video),
@@ -67,21 +67,44 @@ export async function POST(req: NextRequest) {
         csvEscape(meta.stimIndex),
         csvEscape(meta.normalized),
       ].join(",");
-      return row;
     });
 
-    // Append atomically-ish
-    await fsp.appendFile(resultsPath, lines.join("\n") + "\n", "utf8");
+    const header = "Name,UserCulture,Video,Rating,Time,StimCulture,StimEmotion,StimIndex,URL\n";
 
-    return NextResponse.json({
-      ok: true,
-      file: "results/results.csv",
-      appended: lines.length,
-    });
+    // Check if file exists
+    let exists = true;
+    try {
+      await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: KEY }));
+    } catch {
+      exists = false;
+    }
+
+    if (!exists) {
+      // Create new file with header + rows
+      const body = header + lines.join("\n") + "\n";
+      await s3.send(new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: KEY,
+        Body: body,
+        ContentType: "text/csv; charset=utf-8",
+      }));
+      return NextResponse.json({ ok: true, created: true, appended: lines.length, key: KEY });
+    }
+
+    // Append: read current, concatenate, write back (overwrite)
+    const current = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: KEY }));
+    const currentText = await streamToString(current.Body as any);
+    const newBody = currentText + lines.join("\n") + "\n";
+
+    await s3.send(new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: KEY,
+      Body: newBody,
+      ContentType: "text/csv; charset=utf-8",
+    }));
+
+    return NextResponse.json({ ok: true, created: false, appended: lines.length, key: KEY });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || "Failed to save CSV" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: e?.message || "Failed to append to S3 CSV" }, { status: 500 });
   }
 }
