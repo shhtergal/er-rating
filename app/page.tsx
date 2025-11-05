@@ -106,9 +106,10 @@ const cultures = [
   "Kazakh",
   "Armenian",
 
-  // Misc / Mixed
-  "Other",
 ];
+
+cultures.sort((a, b) => a.localeCompare(b));
+cultures.push('Other')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
