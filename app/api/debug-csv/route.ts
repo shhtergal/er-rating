@@ -2,9 +2,11 @@
 import { NextResponse } from "next/server";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
-const REGION = process.env.S3_REGION || "us-east-1";
-const BUCKET = process.env.RESULTS_BUCKET!;
+const REGION = 'eu-north-1';  
+const BUCKET = "er-website-results";
 const KEY = "results/results.csv";
+
+const s3 = new S3Client({ region: REGION });
 
 async function streamToString(stream: any): Promise<string> {
   if (typeof stream?.getReader === "function") {

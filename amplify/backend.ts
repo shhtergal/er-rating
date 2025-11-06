@@ -1,11 +1,14 @@
 import { defineBackend } from '@aws-amplify/backend';
-import { auth } from './auth/resource';
-import { data } from './data/resource';
+import { storage } from '@aws-amplify/backend/storage';
 
-/**
- * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
- */
-defineBackend({
-  auth,
-  data,
+const backend = defineBackend({
+  storage: storage({
+    name: 'er-website-results',
+    access: {
+      // Authenticated users only
+      'authenticated': ['read', 'write', 'delete'],
+    },
+  }),
 });
+
+export default backend;
